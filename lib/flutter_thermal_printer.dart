@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_thermal_printer/Windows/window_printer_manager.dart';
+import 'package:flutter_thermal_printer/flutter_thermal_printer.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
 import 'package:image/image.dart' as img;
 import 'package:screenshot/screenshot.dart';
@@ -153,7 +157,7 @@ class FlutterThermalPrinter {
 
     final controller = ScreenshotController();
     // Capture the widget as an image
-    final image = await controller.captureFromLongWidget(
+    final Uint8List image = await controller.captureFromLongWidget(
       widget,
       pixelRatio: View.of(context).devicePixelRatio,
       delay: delay,
@@ -162,13 +166,13 @@ class FlutterThermalPrinter {
     if (Platform.isWindows) {
       await printData(
         printer,
-        image.toList(),
+        List<int>.from(image), // Convert to growable list
         longData: true,
       );
     } else {
       CapabilityProfile profile0 = profile ?? await CapabilityProfile.load();
       final ticket = Generator(paperSize, profile0);
-      final imageBytes = img.decodeImage(image);
+      final imageBytes = img.decodeImage(Uint8List.fromList(image));
 
       if (imageBytes == null) {
         throw Exception("Failed to decode the captured image.");
@@ -176,8 +180,7 @@ class FlutterThermalPrinter {
 
       final totalHeight = imageBytes.height;
       final totalWidth = imageBytes.width;
-      const rowsToCut =
-          30; // You can adjust this value for the height of each printed segment
+      const rowsToCut = 30; // Height of each printed segment
       final numSlices = (totalHeight / rowsToCut).ceil();
 
       for (var i = 0; i < numSlices; i++) {
