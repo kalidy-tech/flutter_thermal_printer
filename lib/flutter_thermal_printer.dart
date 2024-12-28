@@ -191,7 +191,7 @@ class FlutterThermalPrinter {
       img.Image? imageBytes;
 
       try {
-        imageBytes = img.decodeImage(Uint8List.fromList(image));
+        imageBytes = img.decodeImage(Uint8List.fromList(List<int>.from(image)));
         if (imageBytes == null) {
           throw Exception("Failed to decode the captured image.");
         }
@@ -225,7 +225,7 @@ class FlutterThermalPrinter {
 
           await FlutterThermalPrinter.instance.printData(
             printer,
-            raster,
+            List<int>.from(raster), // Ensure this is a growable list
             longData: true,
           );
         }
