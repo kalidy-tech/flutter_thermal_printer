@@ -156,26 +156,47 @@ class FlutterThermalPrinter {
     }
 
     final controller = ScreenshotController();
-    // Capture the widget as an image
-    final Uint8List image = await controller.captureFromLongWidget(
-      widget,
-      pixelRatio: View.of(context).devicePixelRatio,
-      delay: delay,
-    );
+    Uint8List? image;
+
+    try {
+      // Capture the widget as an image
+      image = await controller.captureFromLongWidget(
+        widget,
+        pixelRatio: View.of(context).devicePixelRatio,
+        delay: delay,
+      );
+    } catch (e) {
+      throw Exception("Image capture failed: $e");
+    }
 
     if (Platform.isWindows) {
-      await printData(
-        printer,
-        List<int>.from(image), // Convert to growable list
-        longData: true,
-      );
+      try {
+        await printData(
+          printer,
+          List<int>.from(image), // Convert to growable list
+          longData: true,
+        );
+      } catch (e) {
+        throw Exception("Printing on Windows failed: $e");
+      }
     } else {
-      CapabilityProfile profile0 = profile ?? await CapabilityProfile.load();
-      final ticket = Generator(paperSize, profile0);
-      final imageBytes = img.decodeImage(Uint8List.fromList(image));
+      CapabilityProfile profile0;
+      try {
+        profile0 = profile ?? await CapabilityProfile.load();
+      } catch (e) {
+        throw Exception("Failed to load capability profile: $e");
+      }
 
-      if (imageBytes == null) {
-        throw Exception("Failed to decode the captured image.");
+      final ticket = Generator(paperSize, profile0);
+      img.Image? imageBytes;
+
+      try {
+        imageBytes = img.decodeImage(Uint8List.fromList(image));
+        if (imageBytes == null) {
+          throw Exception("Failed to decode the captured image.");
+        }
+      } catch (e) {
+        throw Exception("Image decoding failed: $e");
       }
 
       final totalHeight = imageBytes.height;
@@ -183,29 +204,33 @@ class FlutterThermalPrinter {
       const rowsToCut = 30; // Height of each printed segment
       final numSlices = (totalHeight / rowsToCut).ceil();
 
-      for (var i = 0; i < numSlices; i++) {
-        final startY = i * rowsToCut;
-        final sliceHeight = (startY + rowsToCut > totalHeight)
-            ? (totalHeight - startY)
-            : rowsToCut;
-        final croppedImage = img.copyCrop(
-          imageBytes,
-          x: 0,
-          y: startY,
-          width: totalWidth,
-          height: sliceHeight,
-        );
+      try {
+        for (var i = 0; i < numSlices; i++) {
+          final startY = i * rowsToCut;
+          final sliceHeight = (startY + rowsToCut > totalHeight)
+              ? (totalHeight - startY)
+              : rowsToCut;
+          final croppedImage = img.copyCrop(
+            imageBytes,
+            x: 0,
+            y: startY,
+            width: totalWidth,
+            height: sliceHeight,
+          );
 
-        final raster = ticket.imageRaster(
-          croppedImage,
-          imageFn: PosImageFn.bitImageRaster,
-        );
+          final raster = ticket.imageRaster(
+            croppedImage,
+            imageFn: PosImageFn.bitImageRaster,
+          );
 
-        await FlutterThermalPrinter.instance.printData(
-          printer,
-          raster,
-          longData: true,
-        );
+          await FlutterThermalPrinter.instance.printData(
+            printer,
+            raster,
+            longData: true,
+          );
+        }
+      } catch (e) {
+        throw Exception("Image slicing or printing failed: $e");
       }
     }
   }
