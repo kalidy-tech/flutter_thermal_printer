@@ -169,8 +169,9 @@ class FlutterThermalPrinter {
       throw Exception("Image capture failed: $e");
     }
 
-    List<int> growableImageList =
-        List<int>.from(image); // Convert to growable list
+    // Ensure the list is growable
+    List<int> growableImageList = List<int>.from(image);
+    print("Captured image length: ${growableImageList.length}");
 
     if (Platform.isWindows) {
       try {
@@ -229,6 +230,9 @@ class FlutterThermalPrinter {
           List<int> growableRasterList =
               List<int>.from(raster); // Convert to growable list
 
+          // Debugging: Log the length of the list
+          print("Raster length for slice $i: ${growableRasterList.length}");
+
           await FlutterThermalPrinter.instance.printData(
             printer,
             growableRasterList, // Use growable list
@@ -236,6 +240,7 @@ class FlutterThermalPrinter {
           );
         }
       } catch (e) {
+        print("Error details: $e");
         throw Exception("Image slicing or printing failed: $e");
       }
     }
