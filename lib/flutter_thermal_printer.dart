@@ -169,11 +169,14 @@ class FlutterThermalPrinter {
       throw Exception("Image capture failed: $e");
     }
 
+    List<int> fixedLengthImageList =
+        List<int>.from(image).toList(growable: false);
+
     if (Platform.isWindows) {
       try {
         await printData(
           printer,
-          List<int>.from(image), // Convert to growable list
+          fixedLengthImageList, // Ensure this is a fixed-length list
           longData: true,
         );
       } catch (e) {
@@ -191,7 +194,7 @@ class FlutterThermalPrinter {
       img.Image? imageBytes;
 
       try {
-        imageBytes = img.decodeImage(Uint8List.fromList(List<int>.from(image)));
+        imageBytes = img.decodeImage(Uint8List.fromList(fixedLengthImageList));
         if (imageBytes == null) {
           throw Exception("Failed to decode the captured image.");
         }
@@ -223,9 +226,12 @@ class FlutterThermalPrinter {
             imageFn: PosImageFn.bitImageRaster,
           );
 
+          List<int> fixedLengthRasterList =
+              List<int>.from(raster).toList(growable: false);
+
           await FlutterThermalPrinter.instance.printData(
             printer,
-            List<int>.from(raster), // Ensure this is a growable list
+            fixedLengthRasterList, // Ensure this is a fixed-length list
             longData: true,
           );
         }
